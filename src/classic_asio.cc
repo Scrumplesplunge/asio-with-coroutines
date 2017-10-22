@@ -13,15 +13,14 @@ class Session {
     session->WaitForReceipt(std::move(self));
   }
 
-  Session(tcp::socket socket)
-      : socket_(std::move(socket)) {}
+  Session(tcp::socket socket) : socket_(std::move(socket)) {}
 
  private:
   void WaitForReceipt(std::shared_ptr<Session> self) {
     socket_.async_read_some(
         boost::asio::buffer(buffer_.data(), buffer_.size()),
-        [this, self = std::move(self)](
-            boost::system::error_code error_code, std::size_t bytes_read) {
+        [ this, self = std::move(self) ](boost::system::error_code error_code,
+                                         std::size_t bytes_read) {
           HandleReceipt(std::move(self), error_code, bytes_read);
         });
   }
@@ -35,8 +34,8 @@ class Session {
       std::cout << "Processing " << bytes_read << " byte(s).\n";
       boost::asio::async_write(
           socket_, boost::asio::buffer(buffer_.data(), bytes_read),
-          [this, self = std::move(self)](
-              boost::system::error_code error_code, std::size_t bytes_written) {
+          [ this, self = std::move(self) ](boost::system::error_code error_code,
+                                           std::size_t bytes_written) {
             HandleSent(std::move(self), error_code, bytes_written);
           });
     }
@@ -69,17 +68,16 @@ class Server {
 
  private:
   void WaitForConnection() {
-    acceptor_.async_accept(
-        socket_,
-        [this](boost::system::error_code error_code) {
-          HandleAccept(error_code);
-        });
+    acceptor_.async_accept(socket_,
+                           [this](boost::system::error_code error_code) {
+                             HandleAccept(error_code);
+                           });
   }
 
   void HandleAccept(boost::system::error_code error_code) {
     if (error_code) {
-      std::cerr << "Error when accepting connection: "
-                << error_code.message() << "\n";
+      std::cerr << "Error when accepting connection: " << error_code.message()
+                << "\n";
     } else {
       Session::Create(std::move(socket_));
       WaitForConnection();

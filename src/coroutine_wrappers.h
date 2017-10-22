@@ -32,6 +32,7 @@ class Result {
       return {};
     }
   }
+
  private:
   std::variant<error_code, T> contents_;
 };
@@ -42,12 +43,14 @@ class IOAction {
  public:
   bool await_ready() const { return false; }
   Result<std::size_t> await_resume() { return std::move(result_); }
+
  protected:
   struct HandleDone {
     IOAction* io_action;
     std::experimental::coroutine_handle<> handle;
     void operator()(error_code error, std::size_t bytes_transferred);
   };
+
  private:
   Result<std::size_t> result_;
 };
@@ -58,6 +61,7 @@ class ReadSome : public internal::IOAction {
  public:
   ReadSome(tcp::socket& socket, boost::asio::mutable_buffer buffer);
   void await_suspend(std::experimental::coroutine_handle<> handle);
+
  private:
   tcp::socket& socket_;
   boost::asio::mutable_buffer buffer_;
@@ -67,6 +71,7 @@ class WriteSome : public internal::IOAction {
  public:
   WriteSome(tcp::socket& socket, boost::asio::const_buffer buffer);
   void await_suspend(std::experimental::coroutine_handle<> handle);
+
  private:
   tcp::socket& socket_;
   boost::asio::const_buffer buffer_;
@@ -78,6 +83,7 @@ class Accept {
   bool await_ready() const { return false; }
   void await_suspend(std::experimental::coroutine_handle<> handle);
   Result<tcp::socket> await_resume() { return std::move(result_); }
+
  private:
   tcp::acceptor& acceptor_;
   tcp::socket socket_;
