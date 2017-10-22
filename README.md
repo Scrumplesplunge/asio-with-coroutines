@@ -8,6 +8,9 @@ provided in the boost documentation. The second way is by writing a small amount
 of boilerplate to wrap the ASIO interface, and then simply writing some
 coroutines for the echo server.
 
+[1]: http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2017/n4680.pdf
+[2]: http://www.boost.org/doc/libs/1_55_0/doc/html/boost_asio/example/cpp11/echo/async_tcp_echo_server.cpp
+
 ## Requirements
 
 To compile this code, you will need clang 5, the corresponding libc++, and
