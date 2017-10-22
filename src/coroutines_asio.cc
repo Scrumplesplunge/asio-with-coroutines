@@ -23,7 +23,7 @@ Task RunEchoSession(tcp::socket socket) {
 
 Task AcceptConnections(tcp::acceptor acceptor) {
   while (true) {
-    Result<tcp::socket> ressult = co_await Accept(acceptor);
+    Result<tcp::socket> result = co_await Accept(acceptor);
     if (result) {
       RunEchoSession(std::move(result.Get()));
     } else {
