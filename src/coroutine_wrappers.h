@@ -2,15 +2,38 @@
 
 #include <boost/asio.hpp>
 #include <experimental/coroutine>
-
-namespace asio {
+#include <type_traits>
+#include <variant>
 
 using boost::asio::ip::tcp;
 using boost::system::error_code;
 
-struct IOResult {
-  error_code error;
-  std::size_t bytes_transferred;
+// Wraps a result so that it can fail with a boost::system::error_code instead.
+// Example usage:
+//   Result<int> result = Foo();
+//   if (result) {
+//     DoSomethingWith(result.Get());
+//   } else {
+//     std::cerr << "An error occurred: " << result.Error().message() << "\n";
+//   }
+template <typename T,
+          typename = std::enable_if_t<!std::is_same_v<T, error_code>>>
+class Result {
+ public:
+  Result() = default;
+  Result(error_code error) : contents_(error) {}
+  Result(T value) : contents_(std::move(value)) {}
+  operator bool() const { return std::holds_alternative<T>(contents_); }
+  T& Get() { return std::get<T>(contents_); }
+  error_code Error() {
+    if (auto* error = std::get_if<error_code>(&contents_)) {
+      return *error;
+    } else {
+      return {};
+    }
+  }
+ private:
+  std::variant<error_code, T> contents_;
 };
 
 namespace internal {
@@ -18,7 +41,7 @@ namespace internal {
 class IOAction {
  public:
   bool await_ready() const { return false; }
-  IOResult await_resume() { return std::move(result_); }
+  Result<std::size_t> await_resume() { return std::move(result_); }
  protected:
   struct HandleDone {
     IOAction* io_action;
@@ -26,19 +49,10 @@ class IOAction {
     void operator()(error_code error, std::size_t bytes_transferred);
   };
  private:
-  IOResult result_;
+  Result<std::size_t> result_;
 };
 
 }  // namespace internal
-
-class Read : public internal::IOAction {
- public:
-  Read(tcp::socket& socket, boost::asio::mutable_buffer buffer);
-  void await_suspend(std::experimental::coroutine_handle<> handle);
- private:
-  tcp::socket& socket_;
-  boost::asio::mutable_buffer buffer_;
-};
 
 class ReadSome : public internal::IOAction {
  public:
@@ -47,15 +61,6 @@ class ReadSome : public internal::IOAction {
  private:
   tcp::socket& socket_;
   boost::asio::mutable_buffer buffer_;
-};
-
-class Write : public internal::IOAction {
- public:
-  Write(tcp::socket& socket, boost::asio::const_buffer buffer);
-  void await_suspend(std::experimental::coroutine_handle<> handle);
- private:
-  tcp::socket& socket_;
-  boost::asio::const_buffer buffer_;
 };
 
 class WriteSome : public internal::IOAction {
@@ -67,36 +72,24 @@ class WriteSome : public internal::IOAction {
   boost::asio::const_buffer buffer_;
 };
 
-struct ConnectionResult {
-  error_code error;
-  tcp::socket socket;
-};
-
 class Accept {
  public:
   explicit Accept(tcp::acceptor& acceptor);
   bool await_ready() const { return false; }
   void await_suspend(std::experimental::coroutine_handle<> handle);
-  ConnectionResult await_resume() { return std::move(result_); }
+  Result<tcp::socket> await_resume() { return std::move(result_); }
  private:
   tcp::acceptor& acceptor_;
-  ConnectionResult result_;
+  tcp::socket socket_;
+  Result<tcp::socket> result_;
 };
 
 struct Task {
-  struct promise_type;
-  using handle = std::experimental::coroutine_handle<promise_type>;
   struct promise_type {
-    static auto get_return_object_on_allocation_failure() { return Task{}; }
     auto get_return_object() { return Task{}; }
     auto initial_suspend() { return std::experimental::suspend_never{}; }
     auto final_suspend() { return std::experimental::suspend_never{}; }
     void unhandled_exception() { std::terminate(); }
     void return_void() {}
-    auto yield_value(int /* value */) {
-      return std::experimental::suspend_never{};
-    }
   };
 };
-
-}  // namespace asio

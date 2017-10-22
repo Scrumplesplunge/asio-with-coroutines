@@ -1,5 +1,5 @@
 CXX = clang++
-CXXFLAGS += -std=c++17 -Wall -Wextra -pedantic -fcoroutines-ts -stdlib=libc++
+CXXFLAGS += -std=c++2a -Wall -Wextra -pedantic -fcoroutines-ts -stdlib=libc++
 opt: CXXFLAGS += -ffunction-sections -fdata-sections -flto -Ofast -march=native
 prof: CXXFLAGS += -g -Ofast -march=native
 debug: CXXFLAGS += -O0 -g
