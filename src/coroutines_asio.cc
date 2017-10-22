@@ -22,11 +22,15 @@ Task RunEchoSession(tcp::socket socket) {
 }
 
 Task AcceptConnections(tcp::acceptor acceptor) {
-  for (Result<tcp::socket> result = co_await Accept(acceptor);
-       result; result = co_await Accept(acceptor)) {
-    std::cout << "Accepted connection from " << result.Get().remote_endpoint()
-              << ".\n";
-    RunEchoSession(std::move(result.Get()));
+  while (true) {
+    Result<tcp::socket> ressult = co_await Accept(acceptor);
+    if (result) {
+      RunEchoSession(std::move(result.Get()));
+    } else {
+      std::cerr << "Error accepting connection: " << result.Error().message()
+                << "\n";
+      break;
+    }
   }
 }
 
